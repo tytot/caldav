@@ -1,0 +1,13 @@
+name: caldav
+description: A CalDAV API for Dart
+
+environment:
+  sdk: ">=2.2.0 <3.0.0"
+
+dependencies:
+  xml: ^3.5.0
+  http: ^0.12.0+4
+  http_auth: ^0.2.9
+
+dev_dependencies:
+  test: ^1.12.0
