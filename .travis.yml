@@ -1,0 +1,22 @@
+language: node_js
+os: linux
+
+cache:
+  directories:
+    - node_modules
+
+install:
+  - npm i pnpm -g
+  - pnpm install
+
+jobs:
+  include:
+    - stage: tests
+      language: dart
+    - stage: release
+      if: branch = master
+      deploy:
+        provider: script
+        skip_cleanup: true
+        script:
+          - pnpx semantic-release
