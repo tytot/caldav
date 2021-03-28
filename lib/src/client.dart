@@ -70,22 +70,22 @@ class CalDavClient extends http_auth.BasicAuthClient {
   }
 
   /// @deprecated Use getWebDavResponse instead
-  Future<List<WebDavResponse>> getWebDavResponses(String remotePath, {String body}) async {
+  Future<List<WebDavResponse>> getWebDavResponses(String remotePath, {String body, method = 'PROPFIND'}) async {
     remotePath = sanitizePath(remotePath);
     Map<String, String> userHeader = {'Depth': '1'};
     http.Response response = await this
-        ._send('PROPFIND', remotePath, headers: userHeader, body: body);
+        ._send(method, remotePath, headers: userHeader, body: body);
     if (response.statusCode == 301) {
-      return this.getWebDavResponses(response.headers['location']);
+      return this.getWebDavResponses(response.headers['location'], body: body, method: method);
     }
 
     var xmlDocument = xml.parse(response.body);
     return new WebDavResponseParser().parse(xmlDocument);
   }
 
-  Future<WebDavResponse> getWebDavResponse(String remotePath, {String body}) async {
+  Future<WebDavResponse> getWebDavResponse(String remotePath, {String body, method = 'PROPFIND'}) async {
     remotePath = sanitizePath(remotePath);
-    var responses = await this.getWebDavResponses(remotePath, body: body);
+    var responses = await this.getWebDavResponses(remotePath, body: body, method: method);
     return responses.firstWhere((response) => response.href == getFullPath(remotePath));
   }
 
@@ -141,6 +141,46 @@ class CalDavClient extends http_auth.BasicAuthClient {
     return list;
   }
 
+
+  Future<List<WebDavEntry>> getEntries(String calendarPath) async {
+    String body = '''<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:prop>
+    <D:getetag/>
+    <C:calendar-data>
+      <C:comp name="VCALENDAR">
+        <C:prop name="VERSION"/>
+        <C:comp name="VTODO">
+          <C:prop name="SUMMARY"/>
+          <C:prop name="UID"/>
+          <C:prop name="DTSTART"/>
+          <C:prop name="DTEND"/>
+          <C:prop name="DURATION"/>
+          <C:prop name="COMPLETED"/>
+        </C:comp>
+        <C:comp name="VTIMEZONE"/>
+      </C:comp>
+    </C:calendar-data>
+  </D:prop>
+  <C:filter>
+      <C:comp-filter name="VCALENDAR">
+        <C:comp-filter name="VTODO" />
+
+      </C:comp-filter>
+  </C:filter>
+</C:calendar-query>''';
+    print("get entries " + calendarPath);
+    var responses = await this.getWebDavResponses(calendarPath, body: body, method: 'REPORT');
+
+    List<WebDavEntry> list = [];
+    responses.forEach((response) {
+      var data = this.findProperty(response, new WebDavProp('calendar-data'), ignoreNamespace: true);
+      var etag = this.findProperty(response, new WebDavProp('getetag'), ignoreNamespace: true);
+      list.add(new WebDavEntry(response.href, etag.value.toString(), data.value.toString()));
+    });
+
+    return list;
+  }
+
   void createCalendarEvent(String calendarPath) async {
     if (calendarPath.startsWith('/' + this.path)) {
       calendarPath = calendarPath.substring(this.path.length + 1);
@@ -171,4 +211,22 @@ END:VCALENDAR''';
     String xml = response.body;
     developer.log(xml);
   }
+
+  void updateEntry(String entryPath, calendarEntry) async {
+    if (entryPath.startsWith('/' + this.path)) {
+      entryPath = entryPath.substring(this.path.length + 1);
+    }
+
+    http.Response response = await this
+        ._send('PUT', entryPath, body: calendarEntry, headers: {'Depth': '1'});
+    if (response.statusCode == 301) {
+      return this.updateEntry(
+          response.headers['location'], calendarEntry
+      );
+    }
+
+    String xml = response.body;
+    developer.log(xml);
+  }
+
 }

@@ -69,6 +69,19 @@ class WebDavCalendar {
   }
 }
 
+class WebDavEntry {
+  String path;
+  String etag;
+  String data;
+
+  WebDavEntry(this.path, this.etag, this.data);
+
+  @override
+  String toString() {
+    return '$etag (path: $path)';
+  }
+}
+
 class WebDavResourceType {
   String name;
   String namespace;
