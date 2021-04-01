@@ -121,13 +121,14 @@ class CalDavClient extends http_auth.BasicAuthClient {
     }
   }
 
-  Future<List<WebDavCalendar>> getCalendars(String calendarPath) async {
-    String body = '''<x0:propfind xmlns:x0="DAV:">
-  <x0:prop>
-    <x0:displayname/>
-    <x0:principal-collection-set/>
-  </x0:prop>
-</x0:propfind>''';
+  Future<List<WebDavCalendar>> getCalendars(String calendarPath, {String filter = ""}) async {
+    String body = '''<D:propfind xmlns:D="DAV:">
+  <D:prop>
+    <D:displayname/>
+    <D:principal-collection-set/>
+    {$filter}
+  </D:prop>
+</D:propfind>''';
     var responses = await this.getWebDavResponses(calendarPath, body: body);
     // Response object with href = this request does not have calendar information, remove it
     responses.removeWhere((response) => response.href == getFullPath(calendarPath));
@@ -141,6 +142,13 @@ class CalDavClient extends http_auth.BasicAuthClient {
     return list;
   }
 
+  Future<List<WebDavCalendar>> getTodoCalendars(String calendarPath) async {
+    String filter = '''
+    <C:supported-calendar-component-set xmlns:C="urn:ietf:params:xml:ns:caldav">
+           <C:comp name="VTODO"/>
+    </C:supported-calendar-component-set>''';
+    return getCalendars(calendarPath, filter: filter);
+  }
 
   Future<List<WebDavEntry>> getEntries(String calendarPath) async {
     String body = '''<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
@@ -221,6 +229,25 @@ END:VCALENDAR''';
         ._send('PUT', entryPath, body: calendarEntry, headers: {'Depth': '1'});
     if (response.statusCode == 301) {
       return this.updateEntry(
+          response.headers['location'], calendarEntry
+      );
+    }
+
+    String xml = response.body;
+    developer.log(xml);
+  }
+
+
+  //FIXME this is the same as updateEntry
+  void addEntry(String entryPath, calendarEntry) async {
+    if (entryPath.startsWith('/' + this.path)) {
+      entryPath = entryPath.substring(this.path.length + 1);
+    }
+
+    http.Response response = await this
+        ._send('PUT', entryPath, body: calendarEntry, headers: {'Depth': '1'});
+    if (response.statusCode == 301) {
+      return this.addEntry(
           response.headers['location'], calendarEntry
       );
     }
