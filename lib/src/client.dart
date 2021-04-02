@@ -57,7 +57,7 @@ class CalDavClient extends http_auth.BasicAuthClient {
   /// send the request with given [method] and [path]
   Future<http.Response> _send(
       String method, String path, {String body, Map<String, String> headers}) async {
-    String url = this.getUrl(path);
+      String url = getUrl(path);
     var request = http.Request(method, Uri.parse(url));
 
     if (headers != null) request.headers.addAll(headers);
@@ -73,8 +73,7 @@ class CalDavClient extends http_auth.BasicAuthClient {
   Future<List<WebDavResponse>> getWebDavResponses(String remotePath, {String body, method = 'PROPFIND'}) async {
     remotePath = sanitizePath(remotePath);
     Map<String, String> userHeader = {'Depth': '1'};
-    http.Response response = await this
-        ._send(method, remotePath, headers: userHeader, body: body);
+    http.Response response = await _send(method, remotePath, headers: userHeader, body: body);
     if (response.statusCode == 301) {
       return this.getWebDavResponses(response.headers['location'], body: body, method: method);
     }
@@ -152,22 +151,9 @@ class CalDavClient extends http_auth.BasicAuthClient {
 
   Future<List<WebDavEntry>> getEntries(String calendarPath) async {
     String body = '''<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
-  <D:prop>
+     <D:prop>
     <D:getetag/>
-    <C:calendar-data>
-      <C:comp name="VCALENDAR">
-        <C:prop name="VERSION"/>
-        <C:comp name="VTODO">
-          <C:prop name="SUMMARY"/>
-          <C:prop name="UID"/>
-          <C:prop name="DTSTART"/>
-          <C:prop name="DTEND"/>
-          <C:prop name="DURATION"/>
-          <C:prop name="COMPLETED"/>
-        </C:comp>
-        <C:comp name="VTIMEZONE"/>
-      </C:comp>
-    </C:calendar-data>
+    <C:calendar-data/>
   </D:prop>
   <C:filter>
       <C:comp-filter name="VCALENDAR">
@@ -189,36 +175,6 @@ class CalDavClient extends http_auth.BasicAuthClient {
     return list;
   }
 
-  void createCalendarEvent(String calendarPath) async {
-    if (calendarPath.startsWith('/' + this.path)) {
-      calendarPath = calendarPath.substring(this.path.length + 1);
-    }
-
-    String eventFileName = 'event-' + new DateTime.now().millisecondsSinceEpoch.toString();
-    String calendarEntry = '''BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Example Corp.//CalDAV Client//EN
-BEGIN:VEVENT
-UID:20010712T182145Z-123401@example.com
-DTSTAMP:20200212T182145Z
-DTSTART:20200214T170000Z
-DTEND:20200215T040000Z
-SUMMARY:Test Event
-END:VEVENT
-END:VCALENDAR''';
-
-
-    http.Response response = await this
-        ._send('PUT', calendarPath + '/' + eventFileName + '.ics', body: calendarEntry, headers: {'Depth': '1'});
-    if (response.statusCode == 301) {
-      return this.createCalendarEvent(
-          response.headers['location']
-      );
-    }
-
-    String xml = response.body;
-    developer.log(xml);
-  }
 
   void updateEntry(String entryPath, calendarEntry) async {
     if (entryPath.startsWith('/' + this.path)) {
@@ -237,23 +193,42 @@ END:VCALENDAR''';
     developer.log(xml);
   }
 
-
-  //FIXME this is the same as updateEntry
   void addEntry(String entryPath, calendarEntry) async {
+      updateEntry(entryPath, calendarEntry);
+  }
+
+  void removeEntry(String entryPath) async {
     if (entryPath.startsWith('/' + this.path)) {
       entryPath = entryPath.substring(this.path.length + 1);
     }
 
+    //If-Match: "2134-314"
     http.Response response = await this
-        ._send('PUT', entryPath, body: calendarEntry, headers: {'Depth': '1'});
+        ._send('DELETE', entryPath);
     if (response.statusCode == 301) {
-      return this.addEntry(
-          response.headers['location'], calendarEntry
+      return this.removeEntry(
+          response.headers['location']
       );
     }
 
     String xml = response.body;
     developer.log(xml);
+  }
+
+  Future<bool> checkConnection() async {
+    String body = '''<d:propfind xmlns:d="DAV:">
+    <d:prop>
+        <d:current-user-principal />
+    </d:prop>
+    </d:propfind>''';
+
+    http.Response response = await _send('PROPFIND', '/', headers: {'Depth': '0'}, body: body);
+
+    //TODO chase 301?
+
+    print(response.statusCode);
+    print(response.body);
+    return response.statusCode == 207;
   }
 
 }
