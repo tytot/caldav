@@ -12,7 +12,7 @@ class BasicWebDavObject {
 class WebDavResource extends BasicWebDavObject {
   WebDavResourceType resourceType;
 
-  WebDavResource(path, resourceType): super(path) {
+  WebDavResource(path, resourceType) : super(path) {
     this.resourceType = resourceType;
   }
 

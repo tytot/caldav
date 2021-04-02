@@ -27,7 +27,8 @@ class WebDavPropParser extends Parser<WebDavProp> {
       throw new ArgumentError('Unknown namespace ' + element.name.prefix);
     }
     String namespaceUri = this.namespaceMap[element.name.prefix];
-    WebDavProp propObj = new WebDavProp(element.name.local, namespace: namespaceUri);
+    WebDavProp propObj =
+        new WebDavProp(element.name.local, namespace: namespaceUri);
 
     List<WebDavProp> propList = new List<WebDavProp>();
 

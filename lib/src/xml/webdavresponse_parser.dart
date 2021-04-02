@@ -6,7 +6,6 @@ import '../objects.dart';
 import './parser.dart';
 
 class WebDavResponseParser extends Parser<WebDavResponse> {
-
   @override
   String getNodeNamespace() {
     return 'DAV:';
@@ -16,7 +15,6 @@ class WebDavResponseParser extends Parser<WebDavResponse> {
   String getNodeName() {
     return 'response';
   }
-
 
   List<WebDavResponse> parse(XmlNode node) {
     this.updateNamespaces(node);
@@ -41,7 +39,8 @@ class WebDavResponseParser extends Parser<WebDavResponse> {
 
     // href is DAV:href
     String davNamespace = this.pathToNamespaceMap['DAV:'];
-    responseObj.href = response.findElements(davNamespace + ':href').single.text;
+    responseObj.href =
+        response.findElements(davNamespace + ':href').single.text;
     responseObj.propStats = new WebDavPropStatsParser().parse(response);
     return responseObj;
   }
