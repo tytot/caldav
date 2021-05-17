@@ -13,30 +13,20 @@ class WebDavException implements Exception {
 }
 
 class CalDavClient extends http_auth.BasicAuthClient {
-  String host;
-  int port;
   String username;
   String password;
-  String protocol;
   String path;
   String baseUrl;
 
-  CalDavClient(String host, String username, String password, String path,
-      {String protocol = 'http', int port, http.BaseClient httpClient})
+  CalDavClient(Uri uri, String username, String password,
+      {http.BaseClient httpClient})
       : super(username, password, inner: httpClient) {
-    this.baseUrl = "$protocol://$host";
-    if (port != null) {
-      this.baseUrl = "$protocol://$host:$port";
-    }
+    this.baseUrl = uri.toString();
+    this.path = uri.path;
 
     // BaseURL must not end with /
-    if (this.baseUrl.endsWith('"')) {
+    if (this.baseUrl.endsWith('/')) {
       this.baseUrl = this.baseUrl.substring(0, this.baseUrl.length - 1);
-    }
-
-    this.path = path;
-    if (this.path.isNotEmpty && this.path != '"') {
-      this.baseUrl = [this.baseUrl, this.path].join('/');
     }
   }
 
@@ -164,7 +154,7 @@ class CalDavClient extends http_auth.BasicAuthClient {
 
   Future<List<WebDavEntry>> getEntries(String calendarPath) async {
     String body =
-'''<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+        '''<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
     <D:prop>
         <D:getetag/>
         <C:calendar-data/>
