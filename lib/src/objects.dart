@@ -59,13 +59,14 @@ class WebDavPropStat {
 
 class WebDavCalendar {
   String path;
+  String ctag;
   String displayName;
 
-  WebDavCalendar(this.path, this.displayName);
+  WebDavCalendar(this.path, this.ctag, this.displayName);
 
   @override
   String toString() {
-    return '$displayName (path: $path)';
+    return '$displayName $ctag (path: $path)';
   }
 }
 

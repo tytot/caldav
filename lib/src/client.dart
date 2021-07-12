@@ -121,10 +121,11 @@ class CalDavClient extends http_auth.BasicAuthClient {
 
   Future<List<WebDavCalendar>> getCalendars(String calendarPath,
       {String filter = ""}) async {
-    String body = '''<D:propfind xmlns:D="DAV:">
+    String body = '''<D:propfind xmlns:D="DAV:" xmlns:CS="http://calendarserver.org/ns/">
   <D:prop>
     <D:displayname/>
     <D:principal-collection-set/>
+    <CS:getctag/>
     {$filter}
   </D:prop>
 </D:propfind>''';
@@ -138,7 +139,10 @@ class CalDavClient extends http_auth.BasicAuthClient {
       print(response);
       var displayName =
           this.findProperty(response, new WebDavProp('displayname'));
-      list.add(new WebDavCalendar(response.href, displayName.value.toString()));
+
+      var ctag = this.findProperty(response, new WebDavProp('getctag'),
+          ignoreNamespace: true);
+      list.add(new WebDavCalendar(response.href, ctag.value.toString(), displayName.value.toString()));
     });
 
     return list;
@@ -152,31 +156,58 @@ class CalDavClient extends http_auth.BasicAuthClient {
     return getCalendars(calendarPath, filter: filter);
   }
 
-  Future<List<WebDavEntry>> getEntries(String calendarPath) async {
+  Future<List<WebDavEntry>> getEntries(String calendarPath, {List<String> hrefs, bool etagsOnly = false}) async {
+    String filter = '''
+        <C:filter>
+            <C:comp-filter name="VCALENDAR">
+                <C:comp-filter name="VTODO" />
+            </C:comp-filter>
+        </C:filter>
+        ''';
+
+    if (hrefs != null) {
+        if (hrefs.length == 0) {
+            return List<WebDavEntry>();
+        }
+        filter = "";
+        for (var href in hrefs) {
+            filter += "<D:href>${href}</D:href>";
+        }
+    }
+
+    String properties = "<C:calendar-data/><D:getetag/>";
+    if (etagsOnly) {
+        properties = "<D:getetag/>";
+    }
+
+    String queryType = "calendar-query";
+    if (hrefs != null) {
+        queryType = "calendar-multiget";
+    }
+
     String body =
-        '''<C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+        '''<C:${queryType} xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
     <D:prop>
-        <D:getetag/>
-        <C:calendar-data/>
+        ${properties}
     </D:prop>
-    <C:filter>
-        <C:comp-filter name="VCALENDAR">
-            <C:comp-filter name="VTODO" />
-        </C:comp-filter>
-    </C:filter>
-</C:calendar-query>''';
-    print("get entries " + calendarPath);
+    ${filter}
+</C:${queryType}>''';
     var responses = await this
         .getWebDavResponses(calendarPath, body: body, method: 'REPORT');
 
     List<WebDavEntry> list = [];
     responses.forEach((response) {
-      var data = this.findProperty(response, new WebDavProp('calendar-data'),
-          ignoreNamespace: true);
-      var etag = this.findProperty(response, new WebDavProp('getetag'),
-          ignoreNamespace: true);
-      list.add(new WebDavEntry(
-          response.href, etag.value.toString(), data.value.toString()));
+        var etag = this.findProperty(response, WebDavProp('getetag'),
+            ignoreNamespace: true);
+        if (etagsOnly) {
+            list.add(WebDavEntry(
+                response.href, etag.value.toString(), null));
+        } else {
+            var data = this.findProperty(response, WebDavProp('calendar-data'),
+                ignoreNamespace: true);
+            list.add(WebDavEntry(
+                response.href, etag.value.toString(), data.value.toString()));
+        }
     });
 
     return list;
