@@ -105,7 +105,7 @@ packages:
       name: http_auth
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.2.9"
+    version: "1.0.1"
   http_multi_server:
     dependency: transitive
     description:
