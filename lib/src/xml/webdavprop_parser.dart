@@ -24,13 +24,14 @@ class WebDavPropParser extends Parser<WebDavProp> {
 
     XmlElement element = node as XmlElement;
     if (!this.namespaceMap.containsKey(element.name.prefix)) {
-      throw new ArgumentError('Unknown namespace ' + element.name.prefix);
+      throw new ArgumentError(
+          'Unknown namespace ' + (element.name.prefix ?? 'null'));
     }
-    String namespaceUri = this.namespaceMap[element.name.prefix];
+    String namespaceUri = this.namespaceMap[element.name.prefix]!;
     WebDavProp propObj =
         new WebDavProp(element.name.local, namespace: namespaceUri);
 
-    List<WebDavProp> propList = new List<WebDavProp>();
+    List<WebDavProp> propList = <WebDavProp>[];
 
     for (var child in element.children) {
       if (child is XmlText) {

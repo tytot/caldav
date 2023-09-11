@@ -1,7 +1,5 @@
 import 'package:caldav/src/xml/webdavprop_parser.dart';
-import 'package:xml/src/xml/nodes/node.dart';
-import 'package:xml/src/xml/nodes/element.dart';
-import 'package:xml/src/xml/nodes/text.dart';
+import 'package:xml/xml.dart';
 
 import 'parser.dart';
 import '../objects.dart';
@@ -30,7 +28,7 @@ class WebDavPropStatsParser extends Parser<WebDavPropStat> {
 
     WebDavPropStat propStatObj = new WebDavPropStat();
     // prop is DAV:prop
-    String davNamespace = this.pathToNamespaceMap['DAV:'];
+    String davNamespace = this.pathToNamespaceMap['DAV:']!;
     propStat.findElements(davNamespace + ':prop').forEach((prop) {
       prop.children.forEach((child) {
         if (child is XmlText) {

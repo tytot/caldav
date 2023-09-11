@@ -1,6 +1,6 @@
 import 'package:caldav/src/xml/webdavresponse_parser.dart';
 import 'package:test/test.dart';
-import 'package:xml/xml.dart' as xml;
+import 'package:xml/xml.dart';
 
 import '../../_fixtures/caldav_data.dart' as data;
 import 'package:caldav/src/objects.dart';
@@ -8,7 +8,7 @@ import 'package:caldav/src/types.dart' as types;
 
 void main() {
   test('parse XML into objects', () {
-    var xmlDocument = xml.parse(data.nextCloudCurrentUser);
+    var xmlDocument = XmlDocument.parse(data.nextCloudCurrentUser);
 
     WebDavResponseParser parser = new WebDavResponseParser();
     var result = parser.parse(xmlDocument);
@@ -29,7 +29,7 @@ void main() {
   });
 
   test('collect namespaces into a Map', () {
-    var xmlDocument = xml.parse(data.nextCloudCurrentUser);
+    var xmlDocument = XmlDocument.parse(data.nextCloudCurrentUser);
 
     WebDavResponseParser parser = new WebDavResponseParser();
     parser.parse(xmlDocument);

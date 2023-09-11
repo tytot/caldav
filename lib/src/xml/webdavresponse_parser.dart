@@ -1,7 +1,5 @@
 import 'package:caldav/src/xml/webdavpropstats_parser.dart';
-import 'package:xml/src/xml/nodes/node.dart';
-import 'package:xml/src/xml/nodes/document.dart';
-import 'package:xml/src/xml/nodes/element.dart';
+import 'package:xml/xml.dart';
 import '../objects.dart';
 import './parser.dart';
 
@@ -38,7 +36,7 @@ class WebDavResponseParser extends Parser<WebDavResponse> {
     WebDavResponse responseObj = new WebDavResponse();
 
     // href is DAV:href
-    String davNamespace = this.pathToNamespaceMap['DAV:'];
+    String davNamespace = this.pathToNamespaceMap['DAV:']!;
     responseObj.href =
         response.findElements(davNamespace + ':href').single.text;
     responseObj.propStats = new WebDavPropStatsParser().parse(response);

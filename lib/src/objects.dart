@@ -12,9 +12,7 @@ class BasicWebDavObject {
 class WebDavResource extends BasicWebDavObject {
   WebDavResourceType resourceType;
 
-  WebDavResource(path, resourceType) : super(path) {
-    this.resourceType = resourceType;
-  }
+  WebDavResource(path, this.resourceType) : super(path);
 
   @override
   String toString() {
@@ -23,8 +21,8 @@ class WebDavResource extends BasicWebDavObject {
 }
 
 class WebDavResponse {
-  String href;
-  List<WebDavPropStat> propStats;
+  late String href;
+  late List<WebDavPropStat> propStats;
 }
 
 class WebDavProp {
@@ -73,7 +71,7 @@ class WebDavCalendar {
 class WebDavEntry {
   String path;
   String etag;
-  String data;
+  String? data;
 
   WebDavEntry(this.path, this.etag, this.data);
 

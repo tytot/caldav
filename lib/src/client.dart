@@ -1,5 +1,5 @@
 import 'package:caldav/src/xml/webdavresponse_parser.dart';
-import 'package:xml/xml.dart' as xml;
+import 'package:xml/xml.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_auth/http_auth.dart' as http_auth;
 import 'dart:developer' as developer;
@@ -13,13 +13,13 @@ class WebDavException implements Exception {
 }
 
 class CalDavClient extends http_auth.BasicAuthClient {
-  String username;
-  String password;
-  String path;
-  String baseUrl;
+  late String username;
+  late String password;
+  late String path;
+  late String baseUrl;
 
   CalDavClient(Uri uri, String username, String password,
-      {http.BaseClient httpClient})
+      {required http.BaseClient httpClient})
       : super(username, password, inner: httpClient) {
     this.baseUrl = uri.toString();
     this.path = uri.path;
@@ -42,7 +42,7 @@ class CalDavClient extends http_auth.BasicAuthClient {
 
   /// send the request with given [method] and [path]
   Future<http.Response> _send(String method, String path,
-      {String body, Map<String, String> headers}) async {
+      {String? body, Map<String, String>? headers}) async {
     String url = getUrl(path);
     var request = http.Request(method, Uri.parse(url));
 
@@ -57,24 +57,24 @@ class CalDavClient extends http_auth.BasicAuthClient {
 
   /// @deprecated Use getWebDavResponse instead
   Future<List<WebDavResponse>> getWebDavResponses(String remotePath,
-      {String body, method = 'PROPFIND'}) async {
+      {String? body, method = 'PROPFIND'}) async {
     remotePath = sanitizePath(remotePath);
     Map<String, String> userHeader = {'Depth': '1'};
     http.Response response =
         await _send(method, remotePath, headers: userHeader, body: body);
     if (response.statusCode == 301) {
-      return this.getWebDavResponses(response.headers['location'],
+      return this.getWebDavResponses(response.headers['location']!,
           body: body, method: method);
     }
     print(response.statusCode);
     print(response.body);
 
-    var xmlDocument = xml.parse(response.body);
+    var xmlDocument = XmlDocument.parse(response.body);
     return new WebDavResponseParser().parse(xmlDocument);
   }
 
   Future<WebDavResponse> getWebDavResponse(String remotePath,
-      {String body, method = 'PROPFIND'}) async {
+      {String? body, method = 'PROPFIND'}) async {
     remotePath = sanitizePath(remotePath);
     var responses =
         await this.getWebDavResponses(remotePath, body: body, method: method);
@@ -107,7 +107,7 @@ class CalDavClient extends http_auth.BasicAuthClient {
         '/';
   }
 
-  WebDavProp findProperty(WebDavResponse response, WebDavProp property,
+  WebDavProp? findProperty(WebDavResponse response, WebDavProp property,
       {bool ignoreNamespace = false}) {
     for (var propStat in response.propStats) {
       for (var prop in propStat.props) {
@@ -117,11 +117,13 @@ class CalDavClient extends http_auth.BasicAuthClient {
         }
       }
     }
+    return null;
   }
 
   Future<List<WebDavCalendar>> getCalendars(String calendarPath,
       {String filter = ""}) async {
-    String body = '''<D:propfind xmlns:D="DAV:" xmlns:CS="http://calendarserver.org/ns/">
+    String body =
+        '''<D:propfind xmlns:D="DAV:" xmlns:CS="http://calendarserver.org/ns/">
   <D:prop>
     <D:displayname/>
     <D:principal-collection-set/>
@@ -142,7 +144,10 @@ class CalDavClient extends http_auth.BasicAuthClient {
 
       var ctag = this.findProperty(response, new WebDavProp('getctag'),
           ignoreNamespace: true);
-      list.add(new WebDavCalendar(response.href, ctag.value.toString(), displayName.value.toString()));
+      if (ctag != null && displayName != null) {
+        list.add(new WebDavCalendar(response.href, ctag.value.toString(),
+            displayName.value.toString()));
+      }
     });
 
     return list;
@@ -156,7 +161,8 @@ class CalDavClient extends http_auth.BasicAuthClient {
     return getCalendars(calendarPath, filter: filter);
   }
 
-  Future<List<WebDavEntry>> getEntries(String calendarPath, {List<String> hrefs, bool etagsOnly = false}) async {
+  Future<List<WebDavEntry>> getEntries(String calendarPath,
+      {List<String>? hrefs, bool etagsOnly = false}) async {
     String filter = '''
         <C:filter>
             <C:comp-filter name="VCALENDAR">
@@ -166,23 +172,23 @@ class CalDavClient extends http_auth.BasicAuthClient {
         ''';
 
     if (hrefs != null) {
-        if (hrefs.length == 0) {
-            return List<WebDavEntry>();
-        }
-        filter = "";
-        for (var href in hrefs) {
-            filter += "<D:href>${href}</D:href>";
-        }
+      if (hrefs.length == 0) {
+        return <WebDavEntry>[];
+      }
+      filter = "";
+      for (var href in hrefs) {
+        filter += "<D:href>${href}</D:href>";
+      }
     }
 
     String properties = "<C:calendar-data/><D:getetag/>";
     if (etagsOnly) {
-        properties = "<D:getetag/>";
+      properties = "<D:getetag/>";
     }
 
     String queryType = "calendar-query";
     if (hrefs != null) {
-        queryType = "calendar-multiget";
+      queryType = "calendar-multiget";
     }
 
     String body =
@@ -197,17 +203,20 @@ class CalDavClient extends http_auth.BasicAuthClient {
 
     List<WebDavEntry> list = [];
     responses.forEach((response) {
-        var etag = this.findProperty(response, WebDavProp('getetag'),
-            ignoreNamespace: true);
+      var etag = this
+          .findProperty(response, WebDavProp('getetag'), ignoreNamespace: true);
+      if (etag != null) {
         if (etagsOnly) {
-            list.add(WebDavEntry(
-                response.href, etag.value.toString(), null));
+          list.add(WebDavEntry(response.href, etag.value.toString(), null));
         } else {
-            var data = this.findProperty(response, WebDavProp('calendar-data'),
-                ignoreNamespace: true);
+          var data = this.findProperty(response, WebDavProp('calendar-data'),
+              ignoreNamespace: true);
+          if (data != null) {
             list.add(WebDavEntry(
                 response.href, etag.value.toString(), data.value.toString()));
+          }
         }
+      }
     });
 
     return list;
@@ -221,7 +230,7 @@ class CalDavClient extends http_auth.BasicAuthClient {
     http.Response response = await this
         ._send('PUT', entryPath, body: calendarEntry, headers: {'Depth': '1'});
     if (response.statusCode == 301) {
-      return this.updateEntry(response.headers['location'], calendarEntry);
+      return this.updateEntry(response.headers['location']!, calendarEntry);
     }
 
     print(response.statusCode);
@@ -242,7 +251,7 @@ class CalDavClient extends http_auth.BasicAuthClient {
     //If-Match: "2134-314"
     http.Response response = await this._send('DELETE', entryPath);
     if (response.statusCode == 301) {
-      return this.removeEntry(response.headers['location']);
+      return this.removeEntry(response.headers['location']!);
     }
 
     print(response.statusCode);
