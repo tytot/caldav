@@ -56,7 +56,7 @@ abstract class Parser<T> {
 
     attributes.addAll(node.attributes);
 
-    if (node.hasParent && node.parent != null) {
+    if (node.hasParent && !(node.parent is XmlDocument)) {
       var parentAttributes = collectParentAttributes(node.parent!);
       parentAttributes
           .removeWhere((attribute) => attributes.indexOf(attribute) != -1);
