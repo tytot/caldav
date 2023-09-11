@@ -46,7 +46,7 @@ abstract class Parser<T> {
       if (child.toString().startsWith('<?xml')) {
         child = child.nextSibling;
       }
-      while (child != null && child.value?.trim() == '') {
+      while (child != null && child.innerText.trim() == '') {
         child = child.nextSibling;
       }
       if (child != null) {
